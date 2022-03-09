@@ -1,0 +1,9 @@
+*.idea
+**/*.pyc
+**/__pycache__
+*.pytest_cache
+.pytest_cache/
+bitmast_paystack.egg-info/
+build/
+dist/
+**/config/config.ini

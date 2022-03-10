@@ -210,8 +210,10 @@ async def scan_wallet(wallet: str, start_block: str = None, end_block: str = Non
     data = fetch_address_data(address=wallet, params={
         'startblock': start_block, 'endblock': end_block, 'page': page, 'offset': offset, 'sort': sort
     })
-    block_data_by_number = [util.extract_data('blockNumber', x) for x in data]
-    tranx_data = [util.extract_data('hash', x) for x in data]
+    blocks = [util.extract_data('blockNumber', x) for x in data]
+    block_data_by_number = [fetch_block_data(x) for x in blocks]
+    trans = [util.extract_data('hash', x) for x in data]
+    tranx_data = [fetch_transaction_data(x) for x in trans]
     # get all transactions associated to address
     # get all block information associated with transaction
     # generate the various statistics and information objects

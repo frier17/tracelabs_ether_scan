@@ -11,4 +11,5 @@ CRYPTO_COMPARE_SINGLE_SYMBOL_PRICE = r'https://min-api.cryptocompare.com/data/pr
 CRYPTO_COMPARE_OHLCV_BY_TS = r'https://min-api.cryptocompare.com/data/pricehistorical'
 BLOCKCYPHER_BALANCE_TRANSACTION_URL = r'https://api.blockcypher.com/v1/eth/main/addrs'
 BLOCKCYPHER_TRANSACTION_DETAILS_URL = r'https://api.blockcypher.com/v1/eth/main/txs'
-BLOCKCYPHER_BLOCK_DETAILS_URL = r'https://api.blockcypher.com/v1/eth/main/blocks'
+BLOCKCYPHER_BLOCK_BY_HASH_URL = r'https://api.blockcypher.com/v1/eth/main/blocks'
+BLOCKCYPHER_BLOCK_BY_HEIGHT_URL = r'https://api.blockcypher.com/v1/eth/main/blocks'

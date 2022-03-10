@@ -74,7 +74,7 @@ def fetch_transaction_data(tranx: str) -> Any:
         logger.log(logging.INFO, ex.__traceback__)
 
 
-def fetch_block_data(block: str) -> Any:
+def fetch_block_data(block: str = None, height: str = None) -> Any:
     """
     !! Make call to BlockCypher API block URL as etherscan.io does not provide a transaction detail endpoint at
     time of writing
@@ -83,17 +83,30 @@ def fetch_block_data(block: str) -> Any:
     :return:
     :rtype:
     """
-    pattern = r'^0x[a-fA-F0-9]{8,66}$'
-    checker = regex.compile(pattern)
-    if not checker.match(block):
-        raise ValueError('Invalid block hash or number provided')
-    url = f'{settings.BLOCKCYPHER_BLOCK_DETAILS_URL}/{block}'
-    try:
-        return requests.get(url).json()
-    except HTTPError as err:
-        logger.critical(err.__traceback__)
-    except Exception as ex:
-        logger.log(logging.INFO, ex.__traceback__)
+    if block and not height:
+        pattern = r'^0x[a-fA-F0-9]{8,66}$'
+        checker = regex.compile(pattern)
+        if not checker.match(block):
+            raise ValueError('Invalid block hash or number provided')
+        url = f'{settings.BLOCKCYPHER_BLOCK_BY_HASH_URL}/{block}'
+        try:
+            return requests.get(url).json()
+        except HTTPError as err:
+            logger.critical(err.__traceback__)
+        except Exception as ex:
+            logger.log(logging.INFO, ex.__traceback__)
+    elif height and not block:
+        pattern = r'^[0-9]{1,66}$'
+        checker = regex.compile(pattern)
+        if not checker.match(height):
+            raise ValueError('Invalid block hash or number provided')
+        url = f'{settings.BLOCKCYPHER_BLOCK_BY_HEIGHT_URL}/{height}'
+        try:
+            return requests.get(url).json()
+        except HTTPError as err:
+            logger.critical(err.__traceback__)
+        except Exception as ex:
+            logger.log(logging.INFO, ex.__traceback__)
 
 
 def fetch_current_price(token: str, quantity: float, currency: str = 'USD') -> str:

@@ -1,0 +1,46 @@
+.container{
+    max-width: 1024px;
+    margin: 0 auto;
+}
+body {
+    font-size: 14px;
+}
+h1{
+    text-align: center;
+    font-family: 'Goldman';
+}
+header p {
+text-align: center;
+}
+p {
+    font-family: 'Architects Daughter';
+    font-size: 1.2em;
+}
+.form-control{
+    margin: 1.4em 0 1.4em 0.3em;
+    max-width: 97.5% !important;
+    display: inline-block !important;
+}
+.form-input{
+    display: block;
+    height: 30px;
+    padding: 3px;
+    width: 100%;
+    border-radius: 5px;
+    outline: none;
+    border: 1px solid #716d6d;
+}
+.error-div{
+    color: red;
+    font-weight: 600;
+    font-size: 0.85em;
+    margin-top: 1em;
+    padding-left: 1em;
+}
+.card h5 {
+    text-align: center;
+}
+.wrapper {
+    max-width: 800px;
+    margin:0px auto;
+}

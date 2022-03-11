@@ -16,7 +16,7 @@ class TestEtherScan(TestCase):
 
     def test_fetch_data(self) -> None:
         # pull request from router function to fetch server data using test_wallet and sample_block parameters
-        data = router.fetch_address_data(address=self.test_wallet)
+        data = router.fetch_address_txlist(address=self.test_wallet)
         assert data
 
     def test_fetch_transaction_data(self) -> None:

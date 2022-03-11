@@ -13,9 +13,23 @@ app = FastAPI()
 
 
 # Define lookup functions to pull information or datasets
-def fetch_address_data(address: str, params: Mapping = None) -> Any:
+def fetch_address_data(address: str) -> Any:
+    pattern = r'^0x[a-fA-F0-9]{40}$'
+    checker = regex.compile(pattern)
+    if not checker.match(address):
+        raise ValueError('Invalid block hash or number provided')
+    try:
+        data = requests.get(f'{settings.BLOCKCYPHER_ADDRESS_DETAIL_URL}/{address}').json()
+        return data
+    except HTTPError as err:
+        logger.critical(err.__traceback__)
+    except Exception as ex:
+        logger.log(logging.INFO, ex.__traceback__)
+
+
+def fetch_address_txlist(address: str, params: Mapping = None) -> Any:
     """
-    Retrieve full blockchain data for the given address using the etherscan.io API endpoint
+    Retrieve full blockchain or transaction list data for the given address using the etherscan.io API endpoint
     :param address: Ethereum address used to query the network
     :type address: textual data or string
     :param params: dictionary of query parameter that can be used to filter server response.
@@ -36,8 +50,9 @@ def fetch_address_data(address: str, params: Mapping = None) -> Any:
     if params:
         # prepare query string for request
         allowed_keys = ['module', 'action', 'startblock', 'endblock', 'page', 'offset', 'sort']
-        params = {x: y for x, y in params if x in allowed_keys}
-        params.update({'address': address, 'apikey': settings.ETHERSCAN_API_KEY})
+        params = {x: y for x, y in params.items() if x in allowed_keys}
+        params.update(
+            {'module': 'account', 'action': 'txlist', 'address': address, 'apikey': settings.ETHERSCAN_API_KEY})
     else:
         defaults = {'startblocdk': 0, 'endblock': 99999999, 'page': 1, 'offset': 10, 'sort': 'asc'}
         params = {'module': 'account', 'action': 'txlist', 'address': address, 'apikey': settings.ETHERSCAN_API_KEY}
@@ -61,7 +76,7 @@ def fetch_transaction_data(tranx: str) -> Any:
     :return:
     :rtype:
     """
-    pattern = r'^0x[a-fA-F0-9]{64,66}$'
+    pattern = r'^(0x)?[a-fA-F0-9]{64,66}$'
     checker = regex.compile(pattern)
     if not checker.match(tranx):
         raise ValueError('Invalid transaction hash provided')
@@ -84,10 +99,12 @@ def fetch_block_data(block: str = None, height: str = None) -> Any:
     :rtype:
     """
     if block and not height:
-        pattern = r'^0x[a-fA-F0-9]{8,66}$'
+        pattern = r'^(0x)?[a-fA-F0-9]{64,66}$'
         checker = regex.compile(pattern)
         if not checker.match(block):
             raise ValueError('Invalid block hash or number provided')
+        if block.startswith('0x'):
+            block = block[2:]
         url = f'{settings.BLOCKCYPHER_BLOCK_BY_HASH_URL}/{block}'
         try:
             return requests.get(url).json()
@@ -191,6 +208,16 @@ def fetch_historic_price(token: str, timestamp: str, quantity: float = 0.0, curr
         return data
 
 
+@app.get("/", description="Home page of the Ether Scan application demo")
+async def home() -> None:
+    ...
+
+
+@app.get("/test", description="Sample test page of the application")
+async def test() -> None:
+    ...
+
+
 # define async function to pull ethereum data using ether.io API
 @app.post("/", description="Specify an API endpoint which scans the Ethereum blockchain for all normal "
                            "transactions sent of a specified wallet or address")
@@ -207,23 +234,28 @@ async def scan_wallet(wallet: str, start_block: str = None, end_block: str = Non
             raise Exception('Invalid wallet address pattern supplied. Ensure address is a valid Ethereum address '
                             'without spaces or special characters')
 
-    data = fetch_address_data(address=wallet, params={
+    address_data = fetch_address_data(wallet)
+    address_summary = util.address_summary(address_data)
+    out = fetch_address_txlist(address=wallet, params={
         'startblock': start_block, 'endblock': end_block, 'page': page, 'offset': offset, 'sort': sort
     })
-    blocks = [util.extract_data('blockNumber', x) for x in data]
-    block_data_by_number = [fetch_block_data(x) for x in blocks]
+    data = util.extract_data('result', out)
+    blocks = [util.extract_data('blockHash', x) for x in data]
+    block_data = [fetch_block_data(block=x) for x in blocks]
     trans = [util.extract_data('hash', x) for x in data]
     tranx_data = [fetch_transaction_data(x) for x in trans]
     # get all transactions associated to address
     # get all block information associated with transaction
     # generate the various statistics and information objects
     tranx_statistics = [util.generate_tranx_statistics(x) for x in tranx_data]
-    block_statistics = [util.generate_block_statistics(x) for x in block_data_by_number]
+    block_statistics = [util.generate_block_statistics(x) for x in block_data]
     monetary_object = util.generate_monetary_object(data)
     historic_object = util.generate_historic_object(data)
     block_information = util.generate_block_information(data)
     tranx_information = util.generate_transaction_information(data)
     return {
+        'address_summary': address_summary,
+        'address_data': address_data,
         'tranx_statistics': tranx_statistics,
         'block_statistics': block_statistics,
         'monetary_object': monetary_object,
@@ -231,4 +263,3 @@ async def scan_wallet(wallet: str, start_block: str = None, end_block: str = Non
         'block_information': block_information,
         'tranx_information': tranx_information,
     }
-

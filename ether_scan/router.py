@@ -1,8 +1,13 @@
-from typing import Mapping, Any
+import itertools
+from typing import Mapping, Any, Sequence, Union
 import requests
 import re as regex
 from requests.exceptions import HTTPError
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from ether_scan import settings
 from ether_scan import util
 import logging
@@ -10,6 +15,18 @@ import logging
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+templates = Jinja2Templates(directory="templates")
 
 
 # Define lookup functions to pull information or datasets
@@ -19,7 +36,7 @@ def fetch_address_data(address: str) -> Any:
     if not checker.match(address):
         raise ValueError('Invalid block hash or number provided')
     try:
-        data = requests.get(f'{settings.BLOCKCYPHER_ADDRESS_DETAIL_URL}/{address}').json()
+        data = requests.get(f'{settings.BLOCKCYPHER_ADDRESS_DETAIL_URL}/{address}/full').json()
         return data
     except HTTPError as err:
         logger.critical(err.__traceback__)
@@ -69,12 +86,13 @@ def fetch_address_txlist(address: str, params: Mapping = None) -> Any:
 
 def fetch_transaction_data(tranx: str) -> Any:
     """
-    !! Make call to BlockCypher API endpoint as etherscan.io API does not provide a transaction detail endpoint at
+    Retrieve the detail of a transaction from the Ethereum blockchain using the transaction hash.
+    !!Make call to BlockCypher API endpoint as etherscan.io API does not provide a transaction detail endpoint at
     time of writing
-    :param tranx:
-    :type tranx:
-    :return:
-    :rtype:
+    :param tranx: transaction hash
+    :type tranx: string
+    :return: details of a transaction as a dictionary or mapped data structure
+    :rtype: mapping
     """
     pattern = r'^(0x)?[a-fA-F0-9]{64,66}$'
     checker = regex.compile(pattern)
@@ -89,20 +107,25 @@ def fetch_transaction_data(tranx: str) -> Any:
         logger.log(logging.INFO, ex.__traceback__)
 
 
-def fetch_block_data(block: str = None, height: str = None) -> Any:
+def fetch_block_data(block: Union[int, str] = None) -> Any:
     """
+    Retrieve the detail of a block on Ethereum blockchain using the block hash or block height/number.
     !! Make call to BlockCypher API block URL as etherscan.io does not provide a transaction detail endpoint at
     time of writing
-    :param block:
-    :type block:
-    :return:
-    :rtype:
+    :param block: block hash or number
+    :type block: int or string
+    :return: block detail as a dictionary or mapped data structure
+    :rtype: mapping
     """
-    if block and not height:
-        pattern = r'^(0x)?[a-fA-F0-9]{64,66}$'
-        checker = regex.compile(pattern)
-        if not checker.match(block):
-            raise ValueError('Invalid block hash or number provided')
+    block = str(block)
+
+    hash_pattern = r'^(0x)?[a-fA-F0-9]{64,66}$'
+    hash_checker = regex.compile(hash_pattern)
+
+    height_pattern = r'[0-9]{1,66}'
+    height_checker = regex.compile(height_pattern)
+
+    if hash_checker.match(block):
         if block.startswith('0x'):
             block = block[2:]
         url = f'{settings.BLOCKCYPHER_BLOCK_BY_HASH_URL}/{block}'
@@ -112,18 +135,16 @@ def fetch_block_data(block: str = None, height: str = None) -> Any:
             logger.critical(err.__traceback__)
         except Exception as ex:
             logger.log(logging.INFO, ex.__traceback__)
-    elif height and not block:
-        pattern = r'^[0-9]{1,66}$'
-        checker = regex.compile(pattern)
-        if not checker.match(height):
-            raise ValueError('Invalid block hash or number provided')
-        url = f'{settings.BLOCKCYPHER_BLOCK_BY_HEIGHT_URL}/{height}'
+    elif height_checker.match(block):
+        url = f'{settings.BLOCKCYPHER_BLOCK_BY_HEIGHT_URL}/{block}'
         try:
             return requests.get(url).json()
         except HTTPError as err:
             logger.critical(err.__traceback__)
         except Exception as ex:
             logger.log(logging.INFO, ex.__traceback__)
+    else:
+        raise ValueError('Invalid block hash or number provided')
 
 
 def fetch_current_price(token: str, quantity: float, currency: str = 'USD') -> str:
@@ -178,6 +199,53 @@ def fetch_current_price(token: str, quantity: float, currency: str = 'USD') -> s
         return str(value)
 
 
+def generate_tnx_monetary_data(tranx: Any, currency: str = 'USD') -> Any:
+    # Parse iterator or list of tranx to have monetary value field
+    def _parse_to_amount(tnx: Any) -> Any:
+        total = tnx.get('total', None) or tnx.get('value', None)
+        if total:
+            total = total / 10e18
+        monetary_value = fetch_current_price('ETH', total, currency)
+        tnx['current_value'] = monetary_value
+        return tnx
+
+    if isinstance(tranx, Sequence) and not isinstance(tranx, str):
+        return map(lambda a: _parse_to_amount(a), tranx)
+    else:
+        raise ValueError('Invalid iterator or list parsed as transaction list')
+
+
+def generate_addr_monetary_data(address: Any, token: str = 'ETH', currency: str = 'USD') -> Any:
+    # Parse address data to have monetary value
+    total_sent = util.extract_data('total_sent', address)
+    if total_sent:
+        total_sent = total_sent / 10e18
+    else:
+        total_sent = 0.0
+
+    balance = util.extract_data('balance', address)
+    if balance:
+        balance = balance / 10e18
+    else:
+        balance = 0.0
+    final_balance = util.extract_data('final_balance', address)
+    if final_balance:
+        final_balance = final_balance / 10e18
+    else:
+        final_balance = 0.0
+
+    total_money = fetch_current_price(token, total_sent, currency)
+    balance_money = fetch_current_price(token, balance, currency)
+    final_balance_money = fetch_current_price(token, final_balance, currency)
+    address.update({
+        'total_money_sent': total_money,
+        'money_balance': balance_money,
+        'final_money_balance': final_balance_money,
+        'fiat_currency': currency
+    })
+    return address
+
+
 def fetch_historic_price(token: str, timestamp: str, quantity: float = 0.0, currency: str = 'USD',
                          flag: str = 'MidHighLow') -> Mapping:
     """
@@ -208,22 +276,60 @@ def fetch_historic_price(token: str, timestamp: str, quantity: float = 0.0, curr
         return data
 
 
-@app.get("/", description="Home page of the Ether Scan application demo")
-async def home() -> None:
-    ...
+@app.get("/", description="Home page of the Ether Scan application demo", response_class=HTMLResponse)
+async def home(request: Request) -> Response:
+    # load HTML file from templates directory
+    return templates.TemplateResponse('index.html', {'request': request})
 
 
-@app.get("/test", description="Sample test page of the application")
-async def test() -> None:
+@app.get("/docs#", description="Application default documentation page based on Swagger")
+async def doc() -> None:
     ...
 
 
 # define async function to pull ethereum data using ether.io API
-@app.post("/", description="Specify an API endpoint which scans the Ethereum blockchain for all normal "
-                           "transactions sent of a specified wallet or address")
-async def scan_wallet(wallet: str, start_block: str = None, end_block: str = None, page: int = 1, offset: int = 10,
-                      sort: str = 'asc') -> Mapping:
+@app.post("/scan", description="Specify an API endpoint which scans the Ethereum blockchain for all normal "
+                               "transactions sent of a specified wallet or address")
+async def scan_wallet(wallet: str, block: Union[int, str] = None) -> Mapping:
     # validate wallet is in right format
+    if not isinstance(wallet, str):
+        raise Exception('Wallet or address must be a valid string')
+    else:
+        pattern = r'^0x[a-fA-F0-9]{40}$'
+        checker = regex.compile(pattern)
+        wallet = str(wallet).strip()
+        if not checker.match(wallet):
+            raise Exception('Invalid wallet address pattern supplied. Ensure address is a valid Ethereum address '
+                            'without spaces or special characters')
+
+    address_data = fetch_address_data(wallet)
+    address_summary = util.address_summary(address_data)
+    address_summary_monetary = generate_addr_monetary_data(address_summary)
+    trx_lists = util.parse_transactions(util.extract_data('txs', address_data))
+
+    if block:
+        trx_lists = itertools.takewhile(lambda x: x.get('block_height') >= int(block) or x.get('block_hash') == block,
+                                        trx_lists)
+        transactions = [a for a in trx_lists]
+        return {
+            'address_monetary_summary': address_summary_monetary,
+            'transaction_lists': transactions,
+            'block_detail': fetch_block_data(block)
+        }
+    else:
+        transactions = [a for a in trx_lists]
+        return {
+            'address_monetary_summary': address_summary_monetary,
+            'transaction_lists': transactions
+        }
+
+
+@app.post("/scan/block", description="An alternate scan function using EtherScan API. "
+                                     "Scans the Ethereum blockchain for transactions associated with an address. "
+                                     "Information returned concerns financial and block data for each transaction "
+                                     "retrieved")
+def scan_wallet_by_block(wallet: str, start_block: str = None, end_block: str = None, page: int = 1, offset: int = 10,
+                         sort: str = 'asc'):
     if not isinstance(wallet, str):
         raise Exception('Wallet or address must be a valid string')
     else:
@@ -240,26 +346,11 @@ async def scan_wallet(wallet: str, start_block: str = None, end_block: str = Non
         'startblock': start_block, 'endblock': end_block, 'page': page, 'offset': offset, 'sort': sort
     })
     data = util.extract_data('result', out)
-    blocks = [util.extract_data('blockHash', x) for x in data]
-    block_data = [fetch_block_data(block=x) for x in blocks]
-    trans = [util.extract_data('hash', x) for x in data]
-    tranx_data = [fetch_transaction_data(x) for x in trans]
-    # get all transactions associated to address
-    # get all block information associated with transaction
-    # generate the various statistics and information objects
-    tranx_statistics = [util.generate_tranx_statistics(x) for x in tranx_data]
-    block_statistics = [util.generate_block_statistics(x) for x in block_data]
-    monetary_object = util.generate_monetary_object(data)
-    historic_object = util.generate_historic_object(data)
-    block_information = util.generate_block_information(data)
-    tranx_information = util.generate_transaction_information(data)
-    return {
-        'address_summary': address_summary,
-        'address_data': address_data,
-        'tranx_statistics': tranx_statistics,
-        'block_statistics': block_statistics,
-        'monetary_object': monetary_object,
-        'historic_object': historic_object,
-        'block_information': block_information,
-        'tranx_information': tranx_information,
-    }
+    trx_list = generate_tnx_monetary_data(data)
+
+    blocks = (util.extract_data('blockHash', x) for x in data)
+    block_data = (fetch_block_data(block=x) for x in blocks)
+    trx_list = (x.update({'block_detail': y}) for x in trx_list for y in block_data if
+                x.get('blockNumber') == y.get('height') or x.get('blockHash')[2:] == y.get('hash'))
+
+    return {'tranx_statistics': trx_list, 'address_summary': address_summary}

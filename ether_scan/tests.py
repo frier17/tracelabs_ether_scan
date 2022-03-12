@@ -6,7 +6,7 @@ class TestEtherScan(TestCase):
 
     def setUp(self) -> None:
         self.test_wallet = '0xe87dfcee6cab984fe689b035794f945ff1d57a5e'
-        self.sample_block = '14361451'
+        self.sample_block = '7720873'
         self.sample_tranx = '0xa72aac8075c6bb24a9e02883e9c81d7c2f1951434030394956fa8d44cd845207'
 
     def tearDown(self) -> None:

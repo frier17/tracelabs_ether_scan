@@ -1,20 +1,66 @@
-.container{
-    max-width: 1024px;
-    margin: 0 auto;
-}
 body {
     font-size: 16px;
-	background-color: #efefef;	
+	background-color: #f8f9fa;
+	background-image: url('../img/undraw_all_the_data_re_hh4w.svg');
+	background-size: 600px 800px;
+	background-repeat: no-repeat;
+	background-position: 95% 5%;
 }
 h1{
     text-align: center;
     font-family: 'Goldman';
 }
+table {
+    margin: 15px 0px;
+    width: 100%;
+}
+th {
+    text-transform: capitalize;
+}
+table.dataTable td {
+    font-size: 0.5rem !important;
+    white-space: wrap;
+}
+.container{
+    margin: 0 auto;
+}
+.caption {
+    color:#394c39;
+    font-family: 'Architects Daughter';
+    font-size: 1.2rem;
+}
+.info {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #85b285;
+    cursor: pointer;
+}
+div.loading span {
+    height: 20px;
+    display: block;
+}
+dl::after {
+    content: "";
+    clear: both;
+}
+dt {
+    display: block;
+    float: left;
+    width: 50%;
+    font-weight: 400;
+    color: #394c39;
+    text-transform: capitalize;
+}
+dd {
+    display: block !important;
+    float: left;
+    width:auto;
+    padding: auto 5px 0px 20px;
+}
 header p {
 text-align: center;
 }
 p {
-    font-family: 'Architects Daughter';
     font-size: 1em;
 }
 
@@ -24,7 +70,7 @@ p {
 	margin: 1em auto 0;
 	padding: 2em;
 	border-radius: 0.25rem;
-	
+	width: 75%;
 }
 
 .error-div{
@@ -35,24 +81,20 @@ p {
     padding-left: 1em;
 }
 .card h5 {
-    text-align: center;
+    text-align: left;
 }
 .wrapper {
     max-width: 800px;
     margin:0px auto;
 }
 
-#result {	
-	opacity: 0.5;
-	background-color: #fff;	
-	background-image: url('../img/undraw_all_the_data_re_hh4w.svg');
-	background-size: 600px 800px;
-	background-repeat: no-repeat;
-	background-position: 95% 5%;
+#result {
+	background-color: #fff;
 	width: 100%;
 	min-height: 400px;
+	margin: 5rem 0rem;
 }
 #result div {
-	opacity: 1;
 	background-color: #fff;
+
 }

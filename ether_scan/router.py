@@ -1,9 +1,9 @@
 import itertools
-from typing import Mapping, Any, Sequence, Union
+from typing import Mapping, Any, Sequence, Union, Dict
 import requests
 import re as regex
 from requests.exceptions import HTTPError
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Body
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -290,8 +290,10 @@ async def doc() -> None:
 # define async function to pull ethereum data using ether.io API
 @app.post("/scan", description="Specify an API endpoint which scans the Ethereum blockchain for all normal "
                                "transactions sent of a specified wallet or address")
-async def scan_wallet(wallet: str, block: Union[int, str] = None) -> Mapping:
+async def scan_wallet(payload: Dict = Body(..., description="Posted data with address and block values")) -> Mapping:
     # validate wallet is in right format
+    wallet = payload.get('address')
+    block = payload.get('block')
     if not isinstance(wallet, str):
         raise Exception('Wallet or address must be a valid string')
     else:

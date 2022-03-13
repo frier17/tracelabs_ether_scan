@@ -1,10 +1,11 @@
 body {
+
     font-size: 16px;
 	background-color: #f8f9fa;
 	background-image: url('../img/undraw_all_the_data_re_hh4w.svg');
-	background-size: 600px 800px;
+	background-size: 200px 400px;
 	background-repeat: no-repeat;
-	background-position: 95% 5%;
+	background-position: 100% 15%;
 }
 h1{
     text-align: center;
@@ -12,14 +13,15 @@ h1{
 }
 table {
     margin: 15px 0px;
-    width: 100%;
+    table-layout: fixed;
+    width: 100% !important;
 }
 th {
     text-transform: capitalize;
 }
 table.dataTable td {
-    font-size: 0.5rem !important;
-    white-space: wrap;
+    font-size: 0.8rem !important;
+    word-break: break-all;
 }
 .container{
     margin: 0 auto;

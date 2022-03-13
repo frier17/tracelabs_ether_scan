@@ -115,12 +115,12 @@ function scan(event) {
                 {title: "outputs"},
                 {title: "age"},
             ],
-            scrollX: true
+
         });
         setTimeout(() => {
             $('#loading-bar').toggleClass('collapse');
             $('#result').removeClass('collapse');
-        }, 5000);
+        }, 1000);
 
 
     }).catch(error => {

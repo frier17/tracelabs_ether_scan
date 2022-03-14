@@ -11,6 +11,14 @@ The application was built using web services of [etherscan.io](https://etherscan
 Queries relating to the blockchain are performed using the [etherscan.io](https://etherscan.io/apis) or [BlockCypher](https://www.blockcypher.com/dev/ethereum/#introduction). Queries for block and transaction are retrieved using the 
 [BlockCypher Ethereum API](https://www.blockcypher.com/dev/ethereum/#introduction) API as this provides detailed information for a free API package. Alternate implementation using [etherscan.io](https://etherscan.io/apis) was also implemented. At the time of writing, both the [etherscan.io](https://etherscan.io/apis) and the [BlockCypher](https://www.blockcypher.com/dev/ethereum/#introduction) web services provide selected information on the Ether token (for both mainnet and testnets) but no free support for other ERC-20, ERC-721 (NFT), and ERC-1155 tokens. 
 
+![Low Fidelity Prototype](ether-scan-lfp.png)
+
+**Figure 1:** Wireframe of the Ether Scan web page
+
+![Screen shot](ether-scan.png)
+
+**Figure 2:** Screenshot of the designed Home page
+
 ## Prerequisites
 
 The application was built using Python, HTML5, CSS and JavaScript. Application development and testing were done using a Lenovo Desktop with XP Xeon Processor and running Ubuntu Operating System. Below are the minimum requirements.
